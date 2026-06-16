@@ -589,7 +589,28 @@
 
     <script src="https://cdn.jsdelivr.net/npm/tsparticles-slim@2.12.0/tsparticles.slim.bundle.min.js"></script>
 
-    <script>
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import {
+    getFirestore,
+    doc,
+    getDoc
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+// Your web app's Firebase configuration (must match fathers_day.html)
+const firebaseConfig = {
+    apiKey: "AIzaSyCB4zFWln46AcOZVo88RFqxyI4qDjss2eU",
+    authDomain: "father-s-day-366f2.firebaseapp.com",
+    projectId: "father-s-day-366f2",
+    storageBucket: "father-s-day-366f2.firebasestorage.app",
+    messagingSenderId: "236691517012",
+    appId: "1:236691517012:web:e7892ae292059ece7847c1",
+    measurementId: "G-WM6VC0LWSC"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
 const audio = document.getElementById('welcomeAudio');
 function enableAudio() {
     audio.play().then(() => {
@@ -758,7 +779,7 @@ document.addEventListener('click', enableAudio);
         return new URLSearchParams(window.location.search).get(param);
     }
 
-    function loadWishData() {
+    async function loadWishData() {
         const id = getUrlParam('id');
         const contentDiv = document.getElementById('content');
 
@@ -767,17 +788,17 @@ document.addEventListener('click', enableAudio);
             return;
         }
 
-        const wishDataStr = localStorage.getItem('wishData_' + id);
-
-        if (!wishDataStr) {
-            contentDiv.innerHTML = '<div class="error-message"><i class="fa-solid fa-circle-exclamation"></i> This envelope is not available or has expired. Ask them to resend the link!</div>';
-            return;
-        }
-
         try {
-            const wishData = JSON.parse(wishDataStr);
-            renderEnvelopeStage(wishData);
+            const snap = await getDoc(doc(db, 'wishes', id));
+
+            if (!snap.exists()) {
+                contentDiv.innerHTML = '<div class="error-message"><i class="fa-solid fa-circle-exclamation"></i> This envelope is not available or has expired. Ask them to resend the link!</div>';
+                return;
+            }
+
+            renderEnvelopeStage(snap.data());
         } catch (e) {
+            console.error('Error loading wish from Firestore:', e);
             contentDiv.innerHTML = '<div class="error-message"><i class="fa-solid fa-circle-exclamation"></i> Something went wrong opening this envelope. Please try again.</div>';
         }
     }
