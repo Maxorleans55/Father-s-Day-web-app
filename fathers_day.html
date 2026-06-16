@@ -739,9 +739,9 @@
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                         <div class="upload-content" id="uploadContent">
-                            <i class="fa-solid fa-camera-retro"></i>
-                            <div class="upload-text">Upload Dad's Photo</div>
-                            <div class="upload-subtext">Tap to choose an image</div>
+                            <i class="fa-solid fa-camera-retro" id="uploadIcon"></i>
+                            <div class="upload-text" id="uploadText">Upload Dad's Photo</div>
+                            <div class="upload-subtext" id="uploadSubtext">Tap to choose an image</div>
                         </div>
                         <input type="file" id="photoInput" accept="image/*" aria-label="Upload father's photo">
                     </label>
@@ -826,7 +826,30 @@
 
     <script src="https://cdn.jsdelivr.net/npm/tsparticles-slim@2.12.0/tsparticles.slim.bundle.min.js"></script>
 
-    <script>
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCB4zFWln46AcOZVo88RFqxyI4qDjss2eU",
+    authDomain: "father-s-day-366f2.firebaseapp.com",
+    projectId: "father-s-day-366f2",
+    storageBucket: "father-s-day-366f2.firebasestorage.app",
+    messagingSenderId: "236691517012",
+    appId: "1:236691517012:web:e7892ae292059ece7847c1",
+    measurementId: "G-WM6VC0LWSC"
+};
+
+// Initialize Firebase + Firestore (no Firebase Storage — photos are stored as base64 strings)
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
 const audio = document.getElementById('welcomeAudio');
 function enableAudio() {
     audio.play().then(() => {
@@ -978,10 +1001,62 @@ document.addEventListener('click', enableAudio);
         }
     }
 
+    /* ── IMAGE COMPRESSION (keeps base64 small enough for a Firestore doc) ── */
+    function loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function drawScaledJpeg(img, maxDimension, quality) {
+        let { width, height } = img;
+        if (width > height && width > maxDimension) {
+            height = Math.round(height * (maxDimension / width));
+            width = maxDimension;
+        } else if (height >= width && height > maxDimension) {
+            width = Math.round(width * (maxDimension / height));
+            height = maxDimension;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        return canvas.toDataURL('image/jpeg', quality);
+    }
+
+    // Progressively shrinks/compresses the photo until the base64 string is
+    // comfortably under Firestore's 1MB-per-document limit.
+    async function compressImageToFit(file, maxChars = 700000) {
+        const img = await loadImageFromFile(file);
+        const attempts = [
+            { maxDimension: 1000, quality: 0.75 },
+            { maxDimension: 800,  quality: 0.6  },
+            { maxDimension: 600,  quality: 0.5  },
+            { maxDimension: 450,  quality: 0.4  },
+        ];
+        let result = null;
+        for (const opts of attempts) {
+            result = drawScaledJpeg(img, opts.maxDimension, opts.quality);
+            if (result.length <= maxChars) return result;
+        }
+        return result; // smallest attempt, even if still on the large side
+    }
+
     /* ── APP LOGIC ── */
     const photoInput    = document.getElementById('photoInput');
     const imagePreview  = document.getElementById('imagePreview');
     const uploadContent = document.getElementById('uploadContent');
+    const uploadIcon     = document.getElementById('uploadIcon');
+    const uploadText     = document.getElementById('uploadText');
+    const uploadSubtext  = document.getElementById('uploadSubtext');
     const removeBtn     = document.getElementById('removeBtn');
     const nameInput     = document.getElementById('nameInput');
     const messageInput  = document.getElementById('messageInput');
@@ -999,6 +1074,9 @@ document.addEventListener('click', enableAudio);
     const step2 = document.getElementById('step2');
     const step3 = document.getElementById('step3');
 
+    let currentPhotoData   = null;  // compressed base64 JPEG, stored straight in Firestore
+    let isProcessingPhoto  = false;
+
     function setStep(n) {
         [step1, step2, step3].forEach((d, i) => {
             d.classList.remove('active', 'done-step');
@@ -1007,19 +1085,9 @@ document.addEventListener('click', enableAudio);
         });
     }
 
-    function generateUniqueId() {
-        return 'wish_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-    }
-
-    function saveWishData(uid, photo, name, message) {
-        localStorage.setItem('wishData_' + uid, JSON.stringify({
-            id: uid, photo, name, message, createdAt: new Date().toLocaleString()
-        }));
-    }
-
-    function generateShareableLink(uid) {
+    function generateShareableLink(docId) {
         const base = window.location.origin + window.location.pathname;
-        return base.substring(0, base.lastIndexOf('/')) + '/view.html?id=' + uid;
+        return base.substring(0, base.lastIndexOf('/')) + '/view.html?id=' + docId;
     }
 
     function shakeField(el) {
@@ -1052,26 +1120,50 @@ document.addEventListener('click', enableAudio);
         }
     }
 
-    photoInput.addEventListener('change', function(e) {
+    photoInput.addEventListener('change', async function(e) {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-            imagePreview.src = ev.target.result;
+
+        if (!file.type.startsWith('image/')) {
+            alert('📸 Please choose an image file.');
+            photoInput.value = '';
+            return;
+        }
+
+        isProcessingPhoto = true;
+        uploadIcon.className = 'fa-solid fa-spinner fa-spin';
+        uploadText.textContent = 'Processing photo…';
+        uploadSubtext.textContent = 'Just a second';
+
+        try {
+            const compressed = await compressImageToFit(file);
+            currentPhotoData = compressed;
+
+            imagePreview.src = compressed;
             imagePreview.style.display = 'block';
             uploadContent.style.display = 'none';
             removeBtn.style.display = 'flex';
             circleFrame.style.cursor = 'default';
             circleFrame.classList.add('has-photo');
             spawnSparkles(sparkleLayer, 14);
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Photo processing error:', err);
+            alert('Could not process that image. Please try a different photo.');
+            photoInput.value = '';
+            currentPhotoData = null;
+        } finally {
+            isProcessingPhoto = false;
+            uploadIcon.className = 'fa-solid fa-camera-retro';
+            uploadText.textContent = "Upload Dad's Photo";
+            uploadSubtext.textContent = 'Tap to choose an image';
+        }
     });
 
     removeBtn.addEventListener('click', function(e) {
         e.preventDefault(); e.stopPropagation();
         if (circleFrame.classList.contains('locked')) return;
         photoInput.value = '';
+        currentPhotoData = null;
         imagePreview.src = '';
         imagePreview.style.display = 'none';
         uploadContent.style.display = 'flex';
@@ -1082,11 +1174,11 @@ document.addEventListener('click', enableAudio);
     });
 
     doneBtn.addEventListener('click', function() {
-        const hasPhoto = photoInput.files.length > 0;
         const name    = nameInput.value.trim();
         const message = messageInput.value.trim();
 
-        if (!hasPhoto) { shakeField(circleFrame); alert('📸 Please upload a photo of your dad first!'); return; }
+        if (isProcessingPhoto) { alert('⏳ Still processing your photo, one second…'); return; }
+        if (!currentPhotoData) { shakeField(circleFrame); alert('📸 Please upload a photo of your dad first!'); return; }
         if (!name)     { shakeField(nameInput); nameInput.focus(); alert('👤 Please enter your name!'); return; }
         if (!message)  { shakeField(messageInput); messageInput.focus(); alert('💝 Please write a message for your dad!'); return; }
 
@@ -1122,6 +1214,8 @@ document.addEventListener('click', enableAudio);
 
         doneBadge.classList.remove('visible');
         sendBtn.style.display = 'none';
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Love';
         shareBtn.style.display = 'none';
         successMsg.style.display = 'none';
         envelopeWrap.classList.remove('visible');
@@ -1129,15 +1223,24 @@ document.addEventListener('click', enableAudio);
         setStep(1);
     });
 
-    sendBtn.addEventListener('click', function() {
-        const file    = photoInput.files[0];
+    sendBtn.addEventListener('click', async function() {
+        if (!currentPhotoData) { alert('📸 Please upload a photo first!'); return; }
+
         const name    = nameInput.value.trim();
         const message = messageInput.value.trim();
-        const reader  = new FileReader();
-        reader.onload = function(event) {
-            const uid = generateUniqueId();
-            saveWishData(uid, event.target.result, name, message);
-            window.currentShareLink = generateShareableLink(uid);
+
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sealing your message…';
+
+        try {
+            const docRef = await addDoc(collection(db, 'wishes'), {
+                name: name,
+                message: message,
+                photo: currentPhotoData,   // base64 JPEG string, stored directly in Firestore
+                createdAt: serverTimestamp()
+            });
+
+            window.currentShareLink = generateShareableLink(docRef.id);
             createConfetti();
 
             envelopeWrap.classList.add('visible');
@@ -1146,8 +1249,12 @@ document.addEventListener('click', enableAudio);
             sendBtn.style.display = 'none';
             shareBtn.style.display = 'flex';
             setStep(3);
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Error saving wish to Firestore:', err);
+            alert('⚠️ Something went wrong sending your message. Please check your connection and try again.');
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Love';
+        }
     });
 
     shareBtn.addEventListener('click', function() {
