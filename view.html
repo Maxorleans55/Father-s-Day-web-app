@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Father's Day Message For You — PixelForge Tech</title>
+    <title>A Father's Day Message For You - PixelForge Tech</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
@@ -128,7 +128,7 @@
 
         .brand-section {
             position: absolute;
-            top: 18px;
+            top: 8px;
             right: 20px;
             display: flex;
             align-items: center;
@@ -326,7 +326,7 @@
         .reveal-stage { display: none; }
         .reveal-stage.visible { display: block; }
 
-        .reveal-header { margin-bottom: 6px; }
+        .reveal-header { margin-bottom: 6px; margin-top: 20px; }
 
         .reveal-header h1 {
             font-family: 'Orbitron', sans-serif;
@@ -555,6 +555,8 @@
 
         @media (max-width: 600px) {
             .container { padding: 34px 18px 28px; border-radius: 28px; }
+            .reveal-header { margin-top: 15px; }
+            .brand-section { top: 8px; }
             .reveal-header h1 { font-size: 22px; }
             .circle-frame, .circle-wrapper { width: 190px; height: 190px; }
             .envelope-click-area { width: 220px; height: 150px; }
@@ -563,7 +565,7 @@
     </style>
 </head>
 <body>
-    <audio id="welcomeAudio" src="welcome.mp3" loop preload="auto"></audio>
+    <audio id="welcomeAudio" src="welcome2.mp3" loop preload="auto"></audio>
 
     <canvas id="aurora-canvas"></canvas>
     <div id="tsparticles"></div>
@@ -581,7 +583,7 @@
 
         <div id="content">
             <div class="loading">
-                <p>Loading your special message…</p>
+                <p>Loading your special message...</p>
                 <div class="spinner"></div>
             </div>
         </div>
@@ -597,15 +599,16 @@ import {
     getDoc
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-// Your web app's Firebase configuration (must match fathers_day.html)
+// IMPORTANT: Add your Firebase configuration here
+// Get these values from your Firebase project settings
 const firebaseConfig = {
-    apiKey: "AIzaSyCB4zFWln46AcOZVo88RFqxyI4qDjss2eU",
-    authDomain: "father-s-day-366f2.firebaseapp.com",
-    projectId: "father-s-day-366f2",
-    storageBucket: "father-s-day-366f2.firebasestorage.app",
-    messagingSenderId: "236691517012",
-    appId: "1:236691517012:web:e7892ae292059ece7847c1",
-    measurementId: "G-WM6VC0LWSC"
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "YOUR_AUTH_DOMAIN_HERE",
+    projectId: "YOUR_PROJECT_ID_HERE",
+    storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+    appId: "YOUR_APP_ID_HERE",
+    measurementId: "YOUR_MEASUREMENT_ID_HERE"
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
@@ -872,28 +875,32 @@ document.addEventListener('click', enableAudio);
                 </button>
 
                 <div class="footer">
-                    <p><span class="heart-accent">♥</span> A special day for special dads <span class="heart-accent">♥</span></p>
-                    <p style="margin-top:8px;">Thank you for being awesome, Dad!</p>
-                    <div class="footer-brand">
-                        <i class="fa-solid fa-bolt" style="color:#FFFF00;"></i>
-                        Crafted by
-                        <span class="pixel-blocks">
-                            <span style="background:#FF008C;"></span>
-                            <span style="background:#00FFFF;"></span>
-                            <span style="background:#FFFF00;"></span>
-                        </span>
-                        <strong style="background:linear-gradient(90deg,#FF008C,#00FFFF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">PixelForge Tech</strong>
-                    </div>
-                </div>
+    <p><span class="heart-accent">LOVE</span> A special day for special dads <span class="heart-accent">LOVE</span></p>
+    <p style="margin-top:8px;">Thank you for being awesome, Dad!</p>
+    <div class="footer-brand">
+        <i class="fa-solid fa-bolt" style="color:#FFFF00;"></i>
+        Crafted by
+        <span class="pixel-blocks">
+            <span style="background:#FF008C;"></span>
+            <span style="background:#00FFFF;"></span>
+            <span style="background:#FFFF00;"></span>
+        </span>
+        <strong style="background:linear-gradient(90deg,#FF008C,#00FFFF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">PixelForge Tech</strong>
+    </div>
+    <a href="https://whatsapp.com/channel/0029Vb6rpEcBVJl1VDOy323z" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; padding:12px 16px; background:linear-gradient(135deg, #25D366, #128C7E); color:white; border-radius:10px; text-decoration:none; font-size:13px; font-weight:600; transition:all 0.3s ease; box-shadow: 0 4px 12px rgba(37,211,102,0.3);">
+        <i class="fa-brands fa-whatsapp"></i>
+        Follow PixelForge on WhatsApp
+    </a>
+</div>
             </div>
         `;
 
         spawnSparkles(document.getElementById('sparkleLayer'), 14);
         createConfetti();
 
-        document.getElementById('backBtn').addEventListener('click', function () {
-            window.location.href = 'fathers_day.html';
-        });
+       document.getElementById('backBtn').addEventListener('click', function () {
+    window.location.href = 'index.html';
+});
     }
 
     window.addEventListener('load', loadWishData);
