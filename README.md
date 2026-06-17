@@ -1,4 +1,4 @@
-<p align="center">
+I'm<p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=FF008C&height=200&section=header&text=Happy%20Fathers%20Day&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Seal%20and%20Share%20Messages&descAlignY=60&descAlign=50" width="100%"/>
 </p>
 
@@ -236,5 +236,5 @@ Making the web beautiful, one project at a time.
 </p>
 
 <p align="center">
-  <sub>Designed & built with passion by PixelForge Tech © 2024</sub>
+  <sub>Designed & built with passion by PixelForge Tech © 2026</sub>
 </p>
