@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://father-s-day-366f2.web.app">
-    <img src="https://img.shields.io/badge/LIVE%20APP-Visit%20Site-FF008C?style=for-the-badge&logoColor=white" alt="Live app"/>
+    <img src="https://img.shields.io/badge/LIVE%30APP-Visit%20Site-FF008C?style=for-the-badge&logoColor=white" alt="Live app"/>
   </a>
   &nbsp;
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge" alt="Status"/>
